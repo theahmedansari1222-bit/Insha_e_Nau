@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+import Avatar from '../../components/Avatar.astro';
+import Card from '../../components/Card.astro';
+import Pager from '../../components/Pager.astro';
+import ShareButton from '../../components/ShareButton.astro';
+import '../../styles/reading.css';
+import { getWriter, getPosts, getCategories, pageNum, unavailable } from '../../lib/data';
+import { siteUrl } from '../../lib/env';
+import { SITE } from '../../lib/site';
+
+const { handle } = Astro.params;
+const page = pageNum(Astro.url);
+
+let writer, list, cats;
+try {
+  [writer, list, cats] = await Promise.all([
+    getWriter(handle!),
+    getPosts({ handle: handle!, page }),
+    getCategories(),
+  ]);
+} catch (e) {
+  console.error('writer page:', e);
+  return unavailable();
+}
+if (!writer) return Astro.rewrite('/404');
+
+const names: Record<string, string> = Object.fromEntries(cats.map((c) => [c.slug, c.name]));
+const url = `${siteUrl()}/w/${writer.handle}`;
+const isNew = writer.published_count < 3;
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+---
+<Base
+  title={writer.name}
+  description={writer.bio || `${writer.name} کی تحریریں ${SITE.name} پر`}
+  image={writer.avatar_url ?? undefined}
+>
+  <div class="container wide">
+    <header class="profile-head">
+      <Avatar name={writer.name} src={writer.avatar_url} size="lg" />
+      <h1 class="nq">{writer.name}</h1>
+      <span class="muted" dir="ltr">@{writer.handle}</span>
+      {isNew && <span class="tag">نیا لکھاری</span>}
+      {writer.bio && <p class="profile-bio">{writer.bio}</p>}
+      <ShareButton url={url} title={writer.name} label="پروفائل شیئر کریں" />
+    </header>
+
+    <h2 class="nq section-title">تحریریں</h2>
+    {list.posts.length === 0 ? (
+      <div class="empty"><p class="muted">ابھی کوئی تحریر شائع نہیں ہوئی۔</p></div>
+    ) : (
+      <div class="feed">
+        {list.posts.map((p) => <Card post={p} catName={names[p.category]} />)}
+      </div>
+    )}
+    <Pager page={page} hasMore={list.hasMore} />
+  </div>
+</Base>

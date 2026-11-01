@@ -1,0 +1,12 @@
+---
+interface Props {
+  name: string;
+  src?: string | null;
+  size?: '' | 'md' | 'lg';
+}
+const { name, src, size = '' } = Astro.props;
+const letter = [...(name || '؟').trim()][0] ?? '؟';
+---
+<span class:list={['avatar', size]} aria-hidden="true">
+  {src ? <img src={src} alt="" loading="lazy" decoding="async" /> : letter}
+</span>

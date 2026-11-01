@@ -1,0 +1,19 @@
+---
+interface Props {
+  current?: string;
+}
+const { current = '/' } = Astro.props;
+---
+<header class="site-header">
+  <div class="container wide bar">
+    <a class="brand" href="/" aria-label="انشائے نو، ہوم">انشائے نو</a>
+    <nav class="desk-nav" aria-label="اہم">
+      <a href="/" aria-current={current === '/' ? 'page' : undefined}>ہوم</a>
+      <a href="/search" aria-current={current.startsWith('/search') ? 'page' : undefined}>تلاش</a>
+      <a class="btn btn-primary" href="/write">تحریر بھیجیں</a>
+    </nav>
+    <a class="icon-btn mobile-only" href="/search" aria-label="تلاش">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+    </a>
+  </div>
+</header>

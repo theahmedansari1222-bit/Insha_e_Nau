@@ -1,0 +1,23 @@
+<div class="progress" aria-hidden="true"><span id="progress-fill"></span></div>
+<script>
+  const fill = document.getElementById('progress-fill');
+  let waiting = false;
+  const update = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(1, h.scrollTop / max) : 0;
+    if (fill) fill.style.transform = `scaleX(${p})`;
+    waiting = false;
+  };
+  addEventListener(
+    'scroll',
+    () => {
+      if (!waiting) {
+        waiting = true;
+        requestAnimationFrame(update);
+      }
+    },
+    { passive: true },
+  );
+  update();
+</script>

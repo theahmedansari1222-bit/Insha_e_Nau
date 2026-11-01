@@ -1,0 +1,29 @@
+---
+import Avatar from './Avatar.astro';
+import { readLabel } from '../lib/urdu';
+import type { PostCard } from '../lib/data';
+
+interface Props {
+  post: PostCard;
+  catName?: string;
+  featured?: boolean;
+}
+const { post, catName = '', featured = false } = Astro.props;
+const label = [post.writer_is_new ? 'نیا لکھاری' : '', catName].filter(Boolean).join(' · ');
+---
+<a class:list={['story', { featured }]} href={`/p/${post.short_id}`}>
+  {featured && !post.cover_url && <span class="mark" aria-hidden="true">ن</span>}
+  {post.cover_url && (
+    <img class="cover" src={post.cover_url} alt="" loading={featured ? 'eager' : 'lazy'} decoding="async" />
+  )}
+  {label && <span class="tag">{label}</span>}
+  <h2 class="nq title">{post.title}</h2>
+  {post.excerpt && <p class="excerpt">{post.excerpt}</p>}
+  <span class="meta">
+    <Avatar name={post.writer_name} src={post.writer_avatar} />
+    <span>
+      <b>{post.writer_name}</b>
+      <small>{readLabel(post.read_minutes)}</small>
+    </span>
+  </span>
+</a>

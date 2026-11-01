@@ -1,0 +1,49 @@
+---
+// لنک کارڈ (واٹس ایپ، ٹیلیگرام وغیرہ) انہی ٹیگز سے بنتا ہے۔
+// یہ سرور پر بنتے ہیں، اس لیے کرالر کو پہلی ہی درخواست میں مل جاتے ہیں۔
+import { siteUrl } from '../lib/env';
+import { SITE } from '../lib/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  noindex?: boolean;
+  publishedTime?: string;
+  author?: string;
+}
+
+const {
+  title,
+  description = SITE.tagline,
+  image,
+  type = 'website',
+  noindex = false,
+  publishedTime,
+  author,
+} = Astro.props;
+
+const base = siteUrl();
+const url = base + Astro.url.pathname;
+const fullTitle = title ? `${title} — ${SITE.name}` : `${SITE.name} — ${SITE.tagline}`;
+const ogTitle = title ?? SITE.name;
+const img = image ? (image.startsWith('http') ? image : base + image) : `${base}/default-card.jpg`;
+---
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={url} />
+{noindex && <meta name="robots" content="noindex,nofollow" />}
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:locale" content="ur_PK" />
+<meta property="og:type" content={type} />
+<meta property="og:title" content={ogTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={url} />
+<meta property="og:image" content={img} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={ogTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={img} />
+{type === 'article' && publishedTime && <meta property="article:published_time" content={publishedTime} />}
+{author && <meta property="article:author" content={author} />}

@@ -1,0 +1,70 @@
+/* فہرست، تحریر پڑھنے اور پروفائل کے انداز */
+
+/* کارڈوں کی فہرست */
+.feed { display: grid; grid-template-columns: 1fr; gap: 16px; padding-block: 20px; }
+@media (min-width: 760px) {
+  .feed { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .story.featured { grid-column: 1 / -1; }
+}
+.story { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; text-decoration: none; }
+.story > *:not(.mark) { position: relative; }
+.story .mark { position: absolute; top: -10px; inset-inline-end: 8px; font-family: var(--f-title); font-size: 240px; line-height: 1.2; color: #1b1f2c; pointer-events: none; }
+.story .cover { width: calc(100% + 44px); max-width: none; margin: -22px -22px 6px; aspect-ratio: 4 / 3; object-fit: cover; }
+.story .title { font-size: 26px; font-weight: 700; line-height: 2; }
+.story.featured .title { font-size: 34px; }
+.story .excerpt { color: var(--muted); font-size: 16px; line-height: 1.9; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.story .meta { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.story .meta b { display: block; font-size: 16px; line-height: 1.6; }
+.story .meta small { display: block; font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+.pager { display: flex; justify-content: center; gap: 12px; padding-block: 8px 24px; }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 72px 20px; }
+.empty .nq { font-size: 26px; }
+
+/* تحریر کا صفحہ */
+.article { padding-block: 24px 8px; }
+.article-title { font-size: clamp(30px, 7vw, 44px); font-weight: 700; line-height: 2.05; margin: 2px 0 10px; }
+.byline { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.byline-text { flex: 1; min-width: 0; line-height: 1.7; }
+.byline-name { display: block; font-weight: 600; font-size: 17px; text-decoration: none; }
+.handle { display: block; color: var(--muted); font-size: 14px; text-align: right; }
+.byline-meta { text-align: end; line-height: 1.7; }
+.article .cover { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-md); margin-bottom: 20px; }
+.tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.fontsw { display: inline-flex; padding: 4px; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 26px; }
+.fontsw button { height: 40px; padding: 0 16px; border: 0; border-radius: 22px; background: transparent; font-size: 15px; }
+.fontsw button[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+
+.prose { color: var(--body); font-size: 19px; line-height: 2.15; overflow-wrap: anywhere; }
+.prose > * + * { margin-top: 1.1em; }
+.prose h2 { font-family: var(--f-title); color: var(--text); font-size: 28px; line-height: 2; margin-top: 1.6em; }
+.prose h3 { color: var(--text); font-size: 22px; font-weight: 600; margin-top: 1.4em; }
+.prose a { color: var(--accent); }
+.prose ul { padding-inline-start: 1.4em; }
+.prose blockquote { font-family: var(--f-title); color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 18px 22px; margin-block: 1.6em; font-size: 22px; line-height: 2.1; }
+.prose hr { border: 0; border-top: 1px solid var(--line); margin-block: 2em; }
+html[data-font='nastaliq'] .prose { font-family: var(--f-title); font-size: 20px; line-height: 2.55; letter-spacing: 0; }
+
+.share { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 28px; }
+.writer-box { display: flex; align-items: flex-start; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px; text-decoration: none; }
+.writer-box b { display: block; font-size: 17px; line-height: 1.7; }
+.writer-box p { color: var(--muted); font-size: 15px; line-height: 1.9; }
+.related { margin-top: 28px; }
+.related h2 { font-size: 24px; }
+
+/* پڑھنے کی پروگریس لائن */
+.progress { position: fixed; top: 0; inset-inline: 0; height: 3px; z-index: 40; }
+.progress span { display: block; height: 100%; background: var(--accent); transform: scaleX(0); transform-origin: right; }
+
+/* لکھاری کا پروفائل */
+.profile-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 40px 0 28px; border-bottom: 1px solid var(--line); }
+.profile-head h1 { font-size: 34px; line-height: 1.9; margin-top: 8px; }
+.profile-bio { color: var(--body); max-width: 520px; }
+.profile-head .btn { margin-top: 12px; }
+.section-title { font-size: 24px; font-weight: 700; padding-top: 24px; }
+
+/* تلاش اور عام صفحے */
+.search-form { display: flex; gap: 8px; padding-block: 20px 4px; }
+.search-form .input { flex: 1; min-width: 0; }
+.page-head { padding: 32px 0 8px; }
+.page-head h1 { font-size: clamp(30px, 7vw, 42px); font-weight: 700; line-height: 2; }

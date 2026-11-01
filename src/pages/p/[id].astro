@@ -1,0 +1,136 @@
+---
+import Base from '../../layouts/Base.astro';
+import Avatar from '../../components/Avatar.astro';
+import Card from '../../components/Card.astro';
+import ReadingBar from '../../components/ReadingBar.astro';
+import ShareButton from '../../components/ShareButton.astro';
+import '../../styles/reading.css';
+import { getPost, getRelated, getCategories, unavailable } from '../../lib/data';
+import { renderMarkdown } from '../../lib/markdown';
+import { readLabel, formatDate } from '../../lib/urdu';
+import { siteUrl } from '../../lib/env';
+import { SITE } from '../../lib/site';
+
+const { id } = Astro.params;
+
+let post, cats;
+try {
+  [post, cats] = await Promise.all([getPost(id!), getCategories()]);
+} catch (e) {
+  console.error('post page:', e);
+  return unavailable();
+}
+if (!post) return Astro.rewrite('/404');
+
+const related = await getRelated(post.category, post.short_id);
+const names: Record<string, string> = Object.fromEntries(cats.map((c) => [c.slug, c.name]));
+const catName = names[post.category] ?? '';
+const base = siteUrl();
+const url = `${base}/p/${post.short_id}`;
+const waHref = `https://wa.me/?text=${encodeURIComponent(`${post.title}\n${url}`)}`;
+const html = renderMarkdown(post.body);
+
+// تلاش کے انجنوں کے لیے منظم معلومات (">" سے بچاؤ کے ساتھ)
+const ld = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: post.title,
+  inLanguage: 'ur',
+  datePublished: post.published_at,
+  dateModified: post.updated_at,
+  author: { '@type': 'Person', name: post.writer_name, url: `${base}/w/${post.writer_handle}` },
+  publisher: { '@type': 'Organization', name: SITE.name, url: base },
+  mainEntityOfPage: url,
+  ...(post.cover_url ? { image: [post.cover_url] } : {}),
+}).replace(/</g, '\\u003c');
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+---
+<Base
+  title={post.title}
+  description={post.excerpt || SITE.tagline}
+  image={post.cover_url ?? undefined}
+  type="article"
+  publishedTime={post.published_at}
+  author={post.writer_name}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" is:inline set:html={ld} />
+    <script is:inline>
+      try {
+        var f = localStorage.getItem('font');
+        if (f === 'nastaliq' || f === 'naskh') document.documentElement.dataset.font = f;
+      } catch (e) {}
+    </script>
+  </Fragment>
+
+  <ReadingBar />
+
+  <article class="container article">
+    <p class="tag">{catName}{post.writer_is_new ? ' · نیا لکھاری' : ''}</p>
+    <h1 class="nq article-title">{post.title}</h1>
+
+    <div class="byline">
+      <Avatar name={post.writer_name} src={post.writer_avatar} size="md" />
+      <div class="byline-text">
+        <a class="byline-name" href={`/w/${post.writer_handle}`}>{post.writer_name}</a>
+        <span class="handle" dir="ltr">@{post.writer_handle}</span>
+      </div>
+      <div class="byline-meta small muted">
+        <time datetime={post.published_at}>{formatDate(post.published_at)}</time><br />
+        {readLabel(post.read_minutes)}
+      </div>
+    </div>
+
+    {post.cover_url && <img class="cover" src={post.cover_url} alt="" fetchpriority="high" decoding="async" />}
+
+    <div class="tools">
+      <div class="fontsw" role="group" aria-label="تحریر کا انداز">
+        <button type="button" data-font-btn="nastaliq" aria-pressed="false">نستعلیق</button>
+        <button type="button" data-font-btn="naskh" aria-pressed="true">نسخ</button>
+      </div>
+    </div>
+
+    <div class="prose" set:html={html} />
+
+    <div class="share">
+      <a class="btn btn-primary" href={waHref} target="_blank" rel="noopener">واٹس ایپ پر بھیجیں</a>
+      <ShareButton url={url} title={post.title} />
+    </div>
+
+    <a class="writer-box" href={`/w/${post.writer_handle}`}>
+      <Avatar name={post.writer_name} src={post.writer_avatar} size="md" />
+      <div>
+        <b>{post.writer_name}</b>
+        {post.writer_bio && <p>{post.writer_bio}</p>}
+      </div>
+    </a>
+  </article>
+
+  {related.length > 0 && (
+    <section class="container wide related">
+      <h2 class="nq">مزید پڑھیں</h2>
+      <div class="feed">
+        {related.map((p) => <Card post={p} catName={names[p.category]} />)}
+      </div>
+    </section>
+  )}
+<script>
+  const root = document.documentElement;
+  const buttons = document.querySelectorAll<HTMLButtonElement>('[data-font-btn]');
+  const apply = (f: string) => {
+    root.dataset.font = f;
+    buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fontBtn === f)));
+  };
+  apply(root.dataset.font || 'naskh');
+  buttons.forEach((b) =>
+    b.addEventListener('click', () => {
+      const f = b.dataset.fontBtn!;
+      apply(f);
+      try {
+        localStorage.setItem('font', f);
+      } catch {}
+    }),
+  );
+</script>
+</Base>

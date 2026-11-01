@@ -1,0 +1,19 @@
+---
+import { getFooterPages } from '../lib/data';
+import { SITE } from '../lib/site';
+import { toUrduDigits } from '../lib/urdu';
+
+// فہرست ایڈمن کے "صفحات" والے حصے سے آتی ہے
+const pages = await getFooterPages();
+const year = toUrduDigits(new Date().getFullYear());
+---
+<footer class="footer">
+  <div class="container wide">
+    {pages.length > 0 && (
+      <nav aria-label="مزید">
+        {pages.map((p) => <a href={`/${p.slug}`}>{p.title}</a>)}
+      </nav>
+    )}
+    <p>© {year} {SITE.name}۔ {SITE.tagline}۔</p>
+  </div>
+</footer>

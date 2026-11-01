@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+import Card from '../components/Card.astro';
+import Pager from '../components/Pager.astro';
+import '../styles/reading.css';
+import { searchPosts, getCategories, pageNum } from '../lib/data';
+
+const q = (Astro.url.searchParams.get('q') ?? '').trim().slice(0, 60);
+const page = pageNum(Astro.url);
+const [{ posts, hasMore }, cats] = await Promise.all([searchPosts(q, page), getCategories()]);
+const names: Record<string, string> = Object.fromEntries(cats.map((c) => [c.slug, c.name]));
+---
+<Base title="تلاش" noindex>
+  <div class="container wide">
+    <form class="search-form" action="/search" method="get" role="search">
+      <input
+        class="input"
+        type="search"
+        name="q"
+        value={q}
+        placeholder="عنوان، لکھاری یا کوئی لفظ"
+        dir="auto"
+        autocomplete="off"
+        aria-label="تلاش"
+      />
+      <button class="btn btn-primary" type="submit">تلاش</button>
+    </form>
+
+    {q.length < 2 ? (
+      <p class="muted" style="padding-block: 16px;">کم از کم دو حروف لکھیں۔</p>
+    ) : posts.length === 0 ? (
+      <div class="empty">
+        <p class="nq">کچھ نہیں ملا</p>
+        <p class="muted">کوئی اور لفظ آزمائیں۔</p>
+      </div>
+    ) : (
+      <div class="feed">
+        {posts.map((p) => <Card post={p} catName={names[p.category]} />)}
+      </div>
+    )}
+    <Pager page={page} hasMore={hasMore} />
+  </div>
+</Base>

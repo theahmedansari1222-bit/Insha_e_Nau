@@ -1,0 +1,14 @@
+{
+  // Cloudflare کی ترتیبات۔ خفیہ کنجی (SUPABASE_SECRET_KEY) یہاں نہ لکھیں،
+  // وہ Cloudflare کے ڈیش بورڈ میں "Secret" کے طور پر ڈالیں۔
+  "name": "inshaenau",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": {
+    "SITE_URL": "https://inshaenau.com",
+    "SUPABASE_URL": "https://itysskhgjiiuelweemsj.supabase.co",
+    "SUPABASE_PUBLIC_KEY": "sb_publishable_9DNnESNCp-RlSpnZFjWdHg_HYPcAqcG",
+    "ADMIN_EMAILS": "PASTE_ADMIN_EMAIL_HERE"
+  }
+}

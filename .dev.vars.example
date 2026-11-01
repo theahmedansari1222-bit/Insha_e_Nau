@@ -1,0 +1,6 @@
+# مقامی ٹیسٹ کے لیے اسے .dev.vars نام سے نقل کریں۔ اصل فائل کبھی گِٹ ہب پر نہ جائے۔
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_PUBLIC_KEY=sb_publishable_xxxx
+SUPABASE_SECRET_KEY=sb_secret_xxxx
+ADMIN_EMAILS=admin@example.com
+SITE_URL=http://localhost:4321

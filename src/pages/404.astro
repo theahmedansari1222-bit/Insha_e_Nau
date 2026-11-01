@@ -1,0 +1,13 @@
+---
+import Base from '../layouts/Base.astro';
+import '../styles/reading.css';
+
+Astro.response.status = 404;
+---
+<Base title="صفحہ نہیں ملا" noindex>
+  <div class="container empty">
+    <p class="nq">یہ صفحہ نہیں ملا</p>
+    <p class="muted">لنک غلط ہو سکتا ہے، یا تحریر ہٹا دی گئی ہو۔</p>
+    <a class="btn btn-primary" href="/">ہوم پر جائیں</a>
+  </div>
+</Base>

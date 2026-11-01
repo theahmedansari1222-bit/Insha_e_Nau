@@ -1,0 +1,30 @@
+---
+// ایڈمن کے "صفحات" والے حصے سے بننے والا ہر صفحہ (ہمارے بارے میں، پرائیویسی، اصول، شرائط...)
+import Base from '../layouts/Base.astro';
+import '../styles/reading.css';
+import { getPage, unavailable } from '../lib/data';
+import { renderMarkdown } from '../lib/markdown';
+import { formatDate } from '../lib/urdu';
+
+const { slug } = Astro.params;
+
+let page;
+try {
+  page = await getPage(slug!);
+} catch (e) {
+  console.error('page:', e);
+  return unavailable();
+}
+if (!page) return Astro.rewrite('/404');
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+---
+<Base title={page.title} description={page.description || undefined}>
+  <div class="container">
+    <header class="page-head">
+      <h1 class="nq">{page.title}</h1>
+    </header>
+    <div class="prose" set:html={renderMarkdown(page.body)} />
+    <p class="small muted" style="margin-top: 32px;">آخری تازہ کاری: {formatDate(page.updated_at)}</p>
+  </div>
+</Base>

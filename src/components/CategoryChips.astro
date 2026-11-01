@@ -1,0 +1,16 @@
+---
+import type { Category } from '../lib/data';
+
+interface Props {
+  categories: Category[];
+  active?: string; // 'all' ، 'new' ، یا زمرے کا slug
+}
+const { categories, active = 'all' } = Astro.props;
+---
+<nav class="chips" aria-label="زمرے">
+  <a class="chip" href="/" aria-current={active === 'all' ? 'page' : undefined}>تازہ</a>
+  <a class="chip" href="/?show=new" aria-current={active === 'new' ? 'page' : undefined}>نئے لکھاری</a>
+  {categories.map((c) => (
+    <a class="chip" href={`/c/${c.slug}`} aria-current={active === c.slug ? 'page' : undefined}>{c.name}</a>
+  ))}
+</nav>

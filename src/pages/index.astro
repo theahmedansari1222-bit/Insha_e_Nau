@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+import Card from '../components/Card.astro';
+import CategoryChips from '../components/CategoryChips.astro';
+import Pager from '../components/Pager.astro';
+import '../styles/reading.css';
+import { getPosts, getCategories, pageNum } from '../lib/data';
+
+const page = pageNum(Astro.url);
+const onlyNew = Astro.url.searchParams.get('show') === 'new';
+const [{ posts, hasMore }, cats] = await Promise.all([getPosts({ page, onlyNew }), getCategories()]);
+const names: Record<string, string> = Object.fromEntries(cats.map((c) => [c.slug, c.name]));
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+---
+<Base>
+  <div class="container wide">
+    <CategoryChips categories={cats} active={onlyNew ? 'new' : 'all'} />
+    {posts.length === 0 ? (
+      <div class="empty">
+        <p class="nq">ابھی یہاں کوئی تحریر نہیں</p>
+        <p class="muted">پہلی تحریر آپ کی ہو سکتی ہے۔</p>
+        <a class="btn btn-primary" href="/write">تحریر بھیجیں</a>
+      </div>
+    ) : (
+      <div class="feed">
+        {posts.map((p, i) => (
+          <Card post={p} catName={names[p.category]} featured={page === 1 && !onlyNew && i === 0} />
+        ))}
+      </div>
+    )}
+    <Pager page={page} hasMore={hasMore} />
+  </div>
+</Base>

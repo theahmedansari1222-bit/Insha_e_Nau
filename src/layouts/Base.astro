@@ -1,0 +1,47 @@
+---
+import '../styles/global.css';
+import SeoTags from '../components/SeoTags.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import TabBar from '../components/TabBar.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  noindex?: boolean;
+  publishedTime?: string;
+  author?: string;
+  bare?: boolean;
+}
+
+const { bare = false, ...seo } = Astro.props;
+const current = Astro.url.pathname;
+---
+<!doctype html>
+<html lang="ur" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0D0F14" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap"
+    />
+    <SeoTags {...seo} />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip" href="#main">مواد پر جائیں</a>
+    {!bare && <Header current={current} />}
+    <main id="main">
+      <slot />
+    </main>
+    {!bare && <Footer />}
+    {!bare && <TabBar current={current} />}
+  </body>
+</html>

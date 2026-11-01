@@ -1,0 +1,35 @@
+---
+interface Props {
+  url: string;
+  label?: string;
+  title?: string;
+}
+const { url, label = 'شیئر کریں', title = '' } = Astro.props;
+---
+<button type="button" class="btn" data-share={url} data-title={title}>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v6h14v-6"></path></svg>
+  <span data-label>{label}</span>
+</button>
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-share]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const url = btn.dataset.share!;
+      const title = btn.dataset.title || document.title;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title, url });
+          return;
+        }
+        await navigator.clipboard.writeText(url);
+        const span = btn.querySelector<HTMLElement>('[data-label]');
+        if (span) {
+          const old = span.textContent;
+          span.textContent = 'لنک کاپی ہو گیا';
+          setTimeout(() => (span.textContent = old), 2000);
+        }
+      } catch {
+        // صارف نے شیئر منسوخ کر دیا
+      }
+    });
+  });
+</script>

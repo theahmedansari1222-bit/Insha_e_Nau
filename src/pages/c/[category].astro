@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import Card from '../../components/Card.astro';
+import CategoryChips from '../../components/CategoryChips.astro';
+import Pager from '../../components/Pager.astro';
+import '../../styles/reading.css';
+import { getPosts, getCategories, pageNum } from '../../lib/data';
+import { SITE } from '../../lib/site';
+
+const { category } = Astro.params;
+const page = pageNum(Astro.url);
+
+const cats = await getCategories();
+const current = cats.find((c) => c.slug === category);
+if (!current) return Astro.rewrite('/404');
+
+const { posts, hasMore } = await getPosts({ category: current.slug, page });
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+---
+<Base title={current.name} description={`${current.name}: ${SITE.tagline}`}>
+  <div class="container wide">
+    <CategoryChips categories={cats} active={current.slug} />
+    {posts.length === 0 ? (
+      <div class="empty">
+        <p class="nq">اس زمرے میں ابھی کوئی تحریر نہیں</p>
+        <a class="btn btn-primary" href="/write">تحریر بھیجیں</a>
+      </div>
+    ) : (
+      <div class="feed">
+        {posts.map((p) => <Card post={p} catName={current.name} />)}
+      </div>
+    )}
+    <Pager page={page} hasMore={hasMore} />
+  </div>
+</Base>

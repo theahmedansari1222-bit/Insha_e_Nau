@@ -1,0 +1,21 @@
+---
+interface Props {
+  page: number;
+  hasMore: boolean;
+}
+const { page, hasMore } = Astro.props;
+
+// موجودہ لنک کے باقی اجزا (جیسے تلاش کا لفظ) برقرار رکھ کر صرف page بدلتا ہے
+const href = (p: number) => {
+  const u = new URL(Astro.url);
+  if (p <= 1) u.searchParams.delete('page');
+  else u.searchParams.set('page', String(p));
+  return u.pathname + u.search;
+};
+---
+{(page > 1 || hasMore) && (
+  <nav class="pager" aria-label="صفحے">
+    {page > 1 && <a class="btn" href={href(page - 1)} rel="prev">پچھلی تحریریں</a>}
+    {hasMore && <a class="btn btn-primary" href={href(page + 1)} rel="next">مزید تحریریں</a>}
+  </nav>
+)}
