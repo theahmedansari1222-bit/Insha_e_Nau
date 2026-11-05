@@ -68,3 +68,7 @@ html[data-font='nastaliq'] .prose { font-family: var(--f-title); font-size: 20px
 .search-form .input { flex: 1; min-width: 0; }
 .page-head { padding: 32px 0 8px; }
 .page-head h1 { font-size: clamp(30px, 7vw, 42px); font-weight: 700; line-height: 2; }
+
+/* پسند اور اشتہار */
+.like-btn[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
+.ad-wrap { margin-block: 24px; min-height: 280px; }

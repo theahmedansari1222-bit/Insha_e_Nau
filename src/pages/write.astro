@@ -1,0 +1,178 @@
+---
+import Base from '../layouts/Base.astro';
+import ImagePicker from '../components/ImagePicker.astro';
+import '../styles/write.css';
+import { getCategories } from '../lib/data';
+import { getEnv } from '../lib/env';
+
+const cats = await getCategories();
+const siteKey = getEnv().TURNSTILE_SITE_KEY || '';
+---
+<Base title="تحریر بھیجیں" description="اپنی تحریر ایڈیٹر کو بھیجیں۔ لاگ اِن کی ضرورت نہیں۔">
+  <div class="container form-page">
+    <h1 class="nq">تحریر بھیجیں</h1>
+    <p class="lead">
+      ایڈیٹر آپ کی تحریر دیکھے گا۔ ضرورت ہو تو چھوٹی ایڈٹ خود کر کے شائع کر دے گا، اور بڑی تبدیلی ہو تو آپ کو بتائے گا۔
+    </p>
+    <p class="hint" style="margin-bottom: 20px;">جو آپ لکھیں گے وہ اسی فون میں خود بخود محفوظ ہوتا رہے گا۔</p>
+
+    <form id="write-form" novalidate>
+      <div class="field">
+        <label class="label" for="email">ای میل</label>
+        <input class="input" id="email" name="email" type="email" dir="ltr" autocomplete="email" required placeholder="name@example.com" />
+        <span class="hint">کسی کو دکھائی نہیں دے گی۔ ایڈیٹر اسی پر آپ سے رابطہ کرے گا۔ پہلے لکھ چکے ہیں تو وہی ای میل لکھیں، آپ کا پروفائل وہی رہے گا۔</span>
+      </div>
+
+      <div class="field">
+        <label class="label" for="name">آپ کا نام</label>
+        <input class="input" id="name" name="name" type="text" autocomplete="name" required maxlength="60" placeholder="جو نام تحریر کے ساتھ دکھے" />
+      </div>
+
+      <div class="field">
+        <label class="label" for="bio">مختصر تعارف</label>
+        <textarea class="textarea" id="bio" name="bio" rows="3" maxlength="300" placeholder="دو تین سطروں میں اپنے بارے میں"></textarea>
+        <span class="hint">یہ آپ کے پروفائل پر دکھے گا۔</span>
+      </div>
+
+      <ImagePicker name="avatar" label="آپ کی تصویر (اختیاری)" hint="گول کاٹ کر دکھائی جائے گی" />
+
+      <div class="field">
+        <label class="label" for="title">تحریر کا عنوان</label>
+        <input class="input" id="title" name="title" type="text" required maxlength="120" placeholder="عنوان" />
+      </div>
+
+      <fieldset>
+        <legend class="label">زمرہ</legend>
+        <div class="radios">
+          {cats.map((c, i) => (
+            <label class="radio">
+              <input type="radio" name="category" value={c.slug} required checked={i === 0} />
+              <span>{c.name}</span>
+            </label>
+          ))}
+        </div>
+        {cats.length === 0 && <p class="hint err">زمرے نہیں مل سکے۔ صفحہ دوبارہ کھولیں۔</p>}
+      </fieldset>
+
+      <ImagePicker name="cover" label="تحریر کی تصویر" hint="چار بائی تین کے قریب ہو تو بہتر، چھوٹی بڑی بھی چلے گی۔ یہی تصویر واٹس ایپ کے کارڈ میں دکھے گی۔" />
+
+      <div class="field">
+        <label class="label" for="body">تحریر</label>
+        <textarea class="textarea" id="body" name="body" rows="14" required placeholder="اپنی تحریر یہاں لکھیں یا پیسٹ کریں…" dir="auto"></textarea>
+        <span class="counter">الفاظ: <span id="count">۰</span> · پیراگراف خالی سطر سے الگ کریں</span>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input type="checkbox" name="agree_own" /> یہ میری اپنی تحریر ہے</label>
+        <label class="check">
+          <input type="checkbox" name="agree_rules" />
+          <span>میں <a href="/rules" target="_blank" rel="noopener">اشاعت کے اصولوں</a> سے متفق ہوں</span>
+        </label>
+      </div>
+
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      {siteKey && <div class="cf-turnstile" data-sitekey={siteKey} data-theme="dark" data-language="ur" style="margin-bottom: 16px;"></div>}
+
+      <div class="form-actions">
+        <p class="err" role="alert" id="form-error" hidden></p>
+        <button class="btn btn-primary btn-block" type="submit" id="send">ایڈیٹر کو بھیجیں</button>
+        <p class="hint" style="text-align: center;">بھیجنے کے بعد آپ کو ایک نجی لنک ملے گا۔ اس پر تحریر کی حالت اور ایڈیٹر کا پیغام دکھائی دے گا۔</p>
+      </div>
+    </form>
+  </div>
+
+  {siteKey && <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer is:inline></script>}
+
+  <script>
+    const form = document.getElementById('write-form') as HTMLFormElement;
+    const errBox = document.getElementById('form-error')!;
+    const sendBtn = document.getElementById('send') as HTMLButtonElement;
+    const countEl = document.getElementById('count')!;
+    const KEY = 'inshaenau-draft-v1';
+    const TEXT_FIELDS = ['email', 'name', 'bio', 'title', 'body'];
+
+    const toUrdu = (n: number) => String(n).replace(/[0-9]/g, (d) => String.fromCharCode(0x06f0 + Number(d)));
+    const field = (n: string) => form.elements.namedItem(n) as HTMLInputElement | HTMLTextAreaElement;
+
+    // مسودہ بحال کرنا
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+      for (const n of TEXT_FIELDS) if (saved[n]) field(n).value = saved[n];
+      if (saved.category) {
+        const r = form.querySelector<HTMLInputElement>(`input[name="category"][value="${CSS.escape(saved.category)}"]`);
+        if (r) r.checked = true;
+      }
+    } catch {}
+
+    const updateCount = () => {
+      const t = field('body').value.trim();
+      countEl.textContent = toUrdu(t ? t.split(/\s+/).length : 0);
+    };
+    updateCount();
+
+    let timer: number | undefined;
+    const save = () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const data: Record<string, string> = {};
+        for (const n of TEXT_FIELDS) data[n] = field(n).value;
+        const cat = form.querySelector<HTMLInputElement>('input[name="category"]:checked');
+        if (cat) data.category = cat.value;
+        try {
+          localStorage.setItem(KEY, JSON.stringify(data));
+        } catch {}
+      }, 400);
+    };
+    form.addEventListener('input', () => {
+      updateCount();
+      save();
+    });
+
+    const showError = (msg: string) => {
+      errBox.textContent = msg;
+      errBox.hidden = false;
+      errBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errBox.hidden = true;
+      const val = (n: string) => field(n).value;
+      const category = form.querySelector<HTMLInputElement>('input[name="category"]:checked')?.value ?? '';
+      const turnstile = (form.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement | null)?.value ?? '';
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'بھیجی جا رہی ہے…';
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: val('email'),
+            name: val('name'),
+            bio: val('bio'),
+            avatar: val('avatar'),
+            title: val('title'),
+            category,
+            cover: val('cover'),
+            body: val('body'),
+            agree_own: (field('agree_own') as HTMLInputElement).checked,
+            agree_rules: (field('agree_rules') as HTMLInputElement).checked,
+            website: val('website'),
+            turnstile,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'تحریر نہیں بھیجی جا سکی۔ دوبارہ کوشش کریں۔');
+        try {
+          localStorage.removeItem(KEY);
+        } catch {}
+        location.href = `/s/${data.token}`;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'تحریر نہیں بھیجی جا سکی۔');
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'ایڈیٹر کو بھیجیں';
+      }
+    });
+  </script>
+</Base>

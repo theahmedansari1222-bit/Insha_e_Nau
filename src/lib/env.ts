@@ -9,6 +9,9 @@ export type Env = {
   SUPABASE_SECRET_KEY: string;
   ADMIN_EMAILS?: string;
   TURNSTILE_SECRET?: string;
+  TURNSTILE_SITE_KEY?: string;
+  ADSENSE_CLIENT?: string;
+  ADSENSE_SLOT_ARTICLE?: string;
 };
 
 export const getEnv = () => env as unknown as Env;

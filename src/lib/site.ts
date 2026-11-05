@@ -18,7 +18,7 @@ export const RESERVED_HANDLES = [
 export const LIMITS = {
   titleMax: 120,
   bioMax: 300,
-  bodyMin: 200,
+  bodyMin: 40, // مختصر شاعری بھی قبول
   bodyMax: 30000,
   nameMax: 60,
 };

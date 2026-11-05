@@ -1,0 +1,88 @@
+---
+interface Props {
+  name: 'avatar' | 'cover';
+  label: string;
+  hint?: string;
+}
+const { name, label, hint = '' } = Astro.props;
+const circle = name === 'avatar';
+---
+<div class="picker" data-picker={name}>
+  <input type="file" accept="image/*" hidden data-file />
+  <input type="hidden" name={name} data-url />
+  <button type="button" class:list={['pick-box', circle ? 'circle' : 'rect']} data-open aria-label={label}>
+    <img alt="" data-preview hidden />
+    <span data-plus aria-hidden="true">+</span>
+  </button>
+  <div>
+    <div class="pick-label">{label}</div>
+    <div class="hint" data-status>{hint}</div>
+    <button type="button" class="link-btn" data-remove hidden>ہٹائیں</button>
+  </div>
+</div>
+
+<script>
+  import { prepareImage } from '../lib/images';
+
+  document.querySelectorAll<HTMLElement>('[data-picker]').forEach((root) => {
+    const kind = root.dataset.picker!;
+    const file = root.querySelector<HTMLInputElement>('[data-file]')!;
+    const url = root.querySelector<HTMLInputElement>('[data-url]')!;
+    const img = root.querySelector<HTMLImageElement>('[data-preview]')!;
+    const plus = root.querySelector<HTMLElement>('[data-plus]')!;
+    const status = root.querySelector<HTMLElement>('[data-status]')!;
+    const open = root.querySelector<HTMLButtonElement>('[data-open]')!;
+    const remove = root.querySelector<HTMLButtonElement>('[data-remove]')!;
+    const idle = status.textContent ?? '';
+
+    const reset = () => {
+      url.value = '';
+      img.hidden = true;
+      plus.hidden = false;
+      remove.hidden = true;
+    };
+
+    open.addEventListener('click', () => file.click());
+    remove.addEventListener('click', () => {
+      reset();
+      status.classList.remove('err');
+      status.textContent = idle;
+    });
+
+    file.addEventListener('change', async () => {
+      const f = file.files?.[0];
+      if (!f) return;
+      status.classList.remove('err');
+      status.textContent = 'تصویر تیار ہو رہی ہے…';
+      try {
+        const blob = await prepareImage(
+          f,
+          kind === 'avatar'
+            ? { maxW: 480, square: true, maxBytes: 150_000 }
+            : { maxW: 1200, ratioRange: [1.2, 1.5], maxBytes: 350_000 },
+        );
+        img.src = URL.createObjectURL(blob);
+        img.hidden = false;
+        plus.hidden = true;
+
+        status.textContent = 'اپلوڈ ہو رہی ہے…';
+        const fd = new FormData();
+        fd.append('file', blob, `${kind}.jpg`);
+        fd.append('kind', kind);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'تصویر اپلوڈ نہیں ہو سکی');
+
+        url.value = data.url;
+        remove.hidden = false;
+        status.textContent = 'تصویر شامل ہو گئی';
+      } catch (e) {
+        reset();
+        status.classList.add('err');
+        status.textContent = e instanceof Error ? e.message : 'تصویر شامل نہیں ہو سکی';
+      } finally {
+        file.value = '';
+      }
+    });
+  });
+</script>

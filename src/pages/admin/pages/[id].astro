@@ -1,0 +1,146 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import MdToolbar from '../../../components/MdToolbar.astro';
+import '../../../styles/write.css';
+import '../../../styles/reading.css';
+import { dbAdmin } from '../../../lib/supabase';
+import { timeAgo } from '../../../lib/urdu';
+
+const { id } = Astro.params;
+const isNew = id === 'new';
+if (!id || (!isNew && !/^[a-z0-9-]{2,40}$/.test(id))) return Astro.rewrite('/404');
+
+let page: any = isNew
+  ? { slug: '', title: '', body: '', description: '', status: 'draft', in_footer: true, is_system: false }
+  : null;
+let versions: any[] = [];
+if (!isNew) {
+  try {
+    const db = dbAdmin();
+    const [p, v] = await Promise.all([
+      db.from('pages').select('*').eq('slug', id).maybeSingle(),
+      db.from('page_versions').select('id,title,body,created_at').eq('slug', id).order('created_at', { ascending: false }).limit(10),
+    ]);
+    if (p.error) throw new Error(p.error.message);
+    page = p.data;
+    versions = v.data ?? [];
+  } catch (e) {
+    console.error('admin page edit:', e);
+    return new Response('ڈیٹا بیس سے رابطہ نہیں ہو سکا', { status: 503 });
+  }
+  if (!page) return Astro.rewrite('/404');
+}
+---
+<Admin title={isNew ? 'ایڈمن: نیا صفحہ' : `ایڈمن: ${page.title}`} active="pages">
+  <p class="small" style="margin-top: 8px;"><a href="/admin/pages" class="muted">← واپس صفحات پر</a></p>
+  <h1 class="nq">{isNew ? 'نیا صفحہ' : page.title}</h1>
+
+  <form id="page-form" data-new={isNew ? '1' : '0'} novalidate>
+    <section class="panel">
+      <div class="field">
+        <label class="label" for="p-title">عنوان</label>
+        <input class="input" id="p-title" value={page.title} maxlength="120" />
+      </div>
+      <div class="field">
+        <label class="label" for="p-slug">صفحے کا پتا (انگریزی چھوٹے حروف، ہندسے، -)</label>
+        <input class="input" id="p-slug" dir="ltr" value={page.slug} maxlength="40" placeholder="مثلاً about" readonly={!isNew} style={!isNew ? 'color: var(--muted);' : ''} />
+        {!isNew && <span class="hint">موجودہ صفحے کا پتا بدلا نہیں جا سکتا۔</span>}
+      </div>
+
+      <label class="label" for="p-body">متن</label>
+      <MdToolbar target="p-body" />
+      <textarea class="textarea" id="p-body" rows="20" dir="auto">{page.body}</textarea>
+
+      <div class="field" style="margin-top: 16px;">
+        <label class="label" for="p-desc">شیئر کارڈ کی سطر (اختیاری)</label>
+        <input class="input" id="p-desc" value={page.description} maxlength="200" placeholder="واٹس ایپ کارڈ میں دکھنے والی ایک سطر" />
+      </div>
+      <label class="check"><input type="checkbox" id="p-footer" checked={page.in_footer} /> نیچے کی پٹی میں لنک دکھائیں</label>
+
+      <p class="err" role="alert" id="page-err" hidden style="margin-top: 12px;"></p>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" data-status="published">محفوظ اور شائع کریں</button>
+        <button type="button" class="btn" data-status="draft">مسودہ محفوظ کریں</button>
+        {!isNew && page.status === 'published' && <a class="btn" href={`/${page.slug}`} target="_blank" rel="noopener">صفحہ دیکھیں</a>}
+        {!isNew && !page.is_system && <button type="button" class="btn btn-danger" id="page-delete">حذف کریں</button>}
+      </div>
+    </section>
+  </form>
+
+  {versions.length > 0 && (
+    <section class="panel">
+      <h2>پرانے ورژن</h2>
+      <p class="small muted">ہر بار محفوظ کرنے پر پچھلا متن یہاں رہ جاتا ہے۔ بحال کرنے سے متن اوپر والے خانے میں آ جاتا ہے، پھر آپ محفوظ کریں۔</p>
+      {versions.map((v) => (
+        <details>
+          <summary>{timeAgo(v.created_at)} · {v.title}</summary>
+          <pre class="orig" data-version-body>{v.body}</pre>
+          <button type="button" class="btn" style="margin-top: 8px;" data-restore>اس ورژن کو بحال کریں</button>
+        </details>
+      ))}
+    </section>
+  )}
+
+  <script>
+    const form = document.getElementById('page-form') as HTMLFormElement;
+    const err = document.getElementById('page-err')!;
+    const isNew = form.dataset.new === '1';
+    const el = (i: string) => document.getElementById(i) as HTMLInputElement & HTMLTextAreaElement;
+
+    async function post(payload: Record<string, unknown>) {
+      const res = await fetch('/api/admin/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'کارروائی پوری نہیں ہو سکی');
+      return data;
+    }
+
+    form.querySelectorAll<HTMLButtonElement>('[data-status]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        err.hidden = true;
+        btn.disabled = true;
+        try {
+          const data = await post({
+            action: 'page-save',
+            isNew,
+            slug: el('p-slug').value,
+            title: el('p-title').value,
+            body: el('p-body').value,
+            description: el('p-desc').value,
+            in_footer: el('p-footer').checked,
+            status: btn.dataset.status,
+          });
+          if (isNew) location.href = `/admin/pages/${data.slug}`;
+          else location.reload();
+        } catch (x) {
+          err.textContent = x instanceof Error ? x.message : 'محفوظ نہیں ہو سکا';
+          err.hidden = false;
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.getElementById('page-delete')?.addEventListener('click', async () => {
+      if (!confirm('یہ صفحہ ہمیشہ کے لیے حذف کر دیا جائے؟')) return;
+      try {
+        await post({ action: 'page-delete', slug: el('p-slug').value });
+        location.href = '/admin/pages';
+      } catch (x) {
+        err.textContent = x instanceof Error ? x.message : 'حذف نہیں ہو سکا';
+        err.hidden = false;
+      }
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('[data-restore]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const pre = b.parentElement!.querySelector('[data-version-body]');
+        if (!pre) return;
+        el('p-body').value = pre.textContent ?? '';
+        el('p-body').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    });
+  </script>
+</Admin>

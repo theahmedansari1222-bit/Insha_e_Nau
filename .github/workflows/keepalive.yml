@@ -1,0 +1,17 @@
+# سپابیس کا مفت پروجیکٹ ایک ہفتہ سرگرمی نہ ہو تو خود رک جاتا ہے۔
+# یہ کام ہر تین دن بعد ہوم پیج کھولتا ہے، جو ڈیٹا بیس سے پڑھتا ہے، اس لیے پروجیکٹ جاگتا رہتا ہے۔
+name: keepalive
+
+on:
+  schedule:
+    - cron: '17 5 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ہوم پیج کھولنا
+        run: curl -fsS --max-time 30 "${SITE_URL:-https://inshaenau.com}/" > /dev/null
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}

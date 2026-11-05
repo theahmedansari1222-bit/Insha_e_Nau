@@ -9,6 +9,9 @@
     "SITE_URL": "https://inshaenau.com",
     "SUPABASE_URL": "https://itysskhgjiiuelweemsj.supabase.co",
     "SUPABASE_PUBLIC_KEY": "sb_publishable_9DNnESNCp-RlSpnZFjWdHg_HYPcAqcG",
-    "ADMIN_EMAILS": "PASTE_ADMIN_EMAIL_HERE"
+    "ADMIN_EMAILS": "PASTE_ADMIN_EMAIL_HERE",
+    "TURNSTILE_SITE_KEY": "",
+    "ADSENSE_CLIENT": "",
+    "ADSENSE_SLOT_ARTICLE": ""
   }
 }

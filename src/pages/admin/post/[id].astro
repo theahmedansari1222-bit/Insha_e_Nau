@@ -1,0 +1,267 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import ImagePicker from '../../../components/ImagePicker.astro';
+import MdToolbar from '../../../components/MdToolbar.astro';
+import '../../../styles/write.css';
+import { dbAdmin } from '../../../lib/supabase';
+import { getCategories } from '../../../lib/data';
+import { siteUrl } from '../../../lib/env';
+import { STATUS_AR, UUID, gmailLink } from '../../../lib/admin';
+import { timeAgo, readLabel, toUrduDigits } from '../../../lib/urdu';
+
+const { id } = Astro.params;
+if (!id || !UUID.test(id)) return Astro.rewrite('/404');
+
+const db = dbAdmin();
+let post: any = null;
+let msgs: any[] = [];
+let others = 0;
+let versions = 0;
+let cats: { slug: string; name: string }[] = [];
+try {
+  const r = await db
+    .from('posts')
+    .select('*, writers(id,name,handle,bio,avatar_url,email,status,published_count)')
+    .eq('id', id)
+    .maybeSingle();
+  if (r.error) throw new Error(r.error.message);
+  post = r.data;
+  if (post) {
+    const [m, o, v, c] = await Promise.all([
+      db.from('messages').select('id,sender,body,created_at').eq('post_id', id).order('created_at'),
+      db.from('posts').select('*', { count: 'exact', head: true }).eq('writer_id', post.writer_id).neq('id', id),
+      db.from('post_versions').select('*', { count: 'exact', head: true }).eq('post_id', id),
+      getCategories(),
+    ]);
+    msgs = m.data ?? [];
+    others = o.count ?? 0;
+    versions = v.count ?? 0;
+    cats = c;
+    // لکھاری کے پیغامات "دیکھ لیے گئے" کا نشان
+    await db.from('messages').update({ seen: true }).eq('post_id', id).eq('sender', 'writer').eq('seen', false);
+  }
+} catch (e) {
+  console.error('admin post:', e);
+  return new Response('ڈیٹا بیس سے رابطہ نہیں ہو سکا', { status: 503 });
+}
+if (!post) return Astro.rewrite('/404');
+
+const w = post.writers;
+const base = siteUrl();
+const privateUrl = `${base}/s/${post.track_token}`;
+const status: string = post.status;
+const isPublished = status === 'published';
+const canPublish = status !== 'published';
+const canApprove = status === 'submitted';
+const canReturn = status === 'submitted' || status === 'approved';
+const canReject = status === 'submitted' || status === 'returned' || status === 'approved';
+const edited = post.body !== post.body_original;
+
+const mailSubject = `انشائے نو: آپ کی تحریر «${post.title}»`;
+const mailBody = `السلام علیکم ${w.name}،\n\nآپ کی تحریر «${post.title}» کے بارے میں:\n\n${post.editor_note || STATUS_AR[status]}\n\nحالت اور پیغامات کے لیے آپ کا نجی لنک:\n${privateUrl}\n\nشکریہ\nانشائے نو`;
+const mailHref = gmailLink(w.email, mailSubject, mailBody);
+const cardImg = post.cover_url || `${base}/default-card.png`;
+const host = new URL(base).host;
+---
+<Admin title={`ایڈمن: ${post.title}`} active="posts">
+  <p class="small" style="margin-top: 8px;"><a href="/admin" class="muted">← واپس فہرست پر</a></p>
+  <p class="tag" style="margin-top: 8px;">{STATUS_AR[status]}</p>
+  <h1 class="nq">{post.title}</h1>
+  <p class="kv">
+    <span>{readLabel(post.read_minutes)}</span>
+    <span>{toUrduDigits(post.words)} الفاظ</span>
+    <span>بھیجی گئی: {timeAgo(post.created_at)}</span>
+    {edited && <span class="ok">ایڈٹ شدہ</span>}
+    {versions > 1 && <span>ورژن: {toUrduDigits(versions)}</span>}
+    {isPublished && <a href={`/p/${post.short_id}`} target="_blank" rel="noopener" style="color: var(--accent);">شائع شدہ صفحہ دیکھیں</a>}
+  </p>
+
+  <form id="post-form" data-id={id} novalidate>
+    <section class="panel">
+      <h2>لکھاری</h2>
+      <p class="kv">
+        <span>ای میل: <a href={`mailto:${w.email}`} dir="ltr" style="color: var(--accent);">{w.email}</a></span>
+        <span>دوسری تحریریں: {toUrduDigits(others)}</span>
+        {w.status === 'pending' ? <span class="ok">نیا لکھاری: ابھی پروفائل منظور نہیں ہوا</span> : <span>حالت: {w.status === 'active' ? 'فعال' : 'بلاک'}</span>}
+        {others > 0 && w.status === 'pending' && <span class="err">اسی ای میل سے پہلے بھی تحریر آ چکی ہے، نام ملا کر جانچیں</span>}
+      </p>
+      <details open={w.status === 'pending' || !w.handle}>
+        <summary>پروفائل کی معلومات {!w.handle && <span class="err">(ہینڈل ضروری ہے)</span>}</summary>
+        <div class="grid-2" style="margin-top: 8px;">
+          <div class="field">
+            <label class="label" for="w-name">نام</label>
+            <input class="input" id="w-name" value={w.name} maxlength="60" />
+          </div>
+          <div class="field">
+            <label class="label" for="w-handle">ہینڈل (انگریزی چھوٹے حروف، ہندسے، _)</label>
+            <input class="input" id="w-handle" dir="ltr" value={w.handle ?? ''} maxlength="20" placeholder="مثلاً mahnoor" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="w-bio">تعارف</label>
+          <textarea class="textarea" id="w-bio" rows="3" maxlength="300">{w.bio}</textarea>
+        </div>
+        {w.avatar_url && <img class="avatar lg" src={w.avatar_url} alt="" style="margin-bottom: 8px;" />}
+        <ImagePicker name="avatar" label={w.avatar_url ? 'نئی تصویر لگائیں' : 'تصویر لگائیں'} hint="خالی چھوڑیں تو موجودہ رہے گی" />
+        {w.avatar_url && <label class="check"><input type="checkbox" id="w-removeavatar" /> موجودہ تصویر ہٹائیں</label>}
+      </details>
+    </section>
+
+    <section class="panel">
+      <h2>تحریر</h2>
+      <div class="field">
+        <label class="label" for="f-title">عنوان</label>
+        <input class="input" id="f-title" value={post.title} maxlength="120" />
+      </div>
+      <div class="field">
+        <label class="label" for="f-category">زمرہ</label>
+        <select class="input" id="f-category">
+          {cats.map((c) => <option value={c.slug} selected={c.slug === post.category}>{c.name}</option>)}
+        </select>
+      </div>
+      {post.cover_url && <img class="cover-now" src={post.cover_url} alt="" />}
+      <ImagePicker name="cover" label={post.cover_url ? 'نئی تصویر لگائیں' : 'تحریر کی تصویر'} hint="خالی چھوڑیں تو موجودہ رہے گی" />
+      {post.cover_url && <label class="check" style="margin-bottom: 16px;"><input type="checkbox" id="f-removecover" /> موجودہ تصویر ہٹائیں</label>}
+
+      <label class="label" for="f-body">متن</label>
+      <MdToolbar target="f-body" />
+      <textarea class="textarea" id="f-body" rows="22" dir="auto">{post.body}</textarea>
+
+      {edited && (
+        <details style="margin-top: 12px;">
+          <summary>لکھاری کی اصل تحریر دیکھیں</summary>
+          <pre class="orig">{post.body_original}</pre>
+        </details>
+      )}
+    </section>
+
+    <section class="panel">
+      <h2>شیئر کارڈ کا پریویو</h2>
+      <p class="small muted" style="margin-bottom: 8px;">واٹس ایپ میں لنک تقریباً ایسا دکھائی دے گا (محفوظ شدہ حالت کے مطابق)۔</p>
+      <div class="wa-card">
+        <img src={cardImg} alt="" />
+        <div class="wa-body">
+          <div class="wa-title">{post.title}</div>
+          <div class="wa-desc">{post.excerpt}</div>
+          <div class="wa-host">{host}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>فیصلہ</h2>
+      <div class="field">
+        <label class="label" for="f-note">لکھاری کے لیے نوٹ (واپس، مسترد، یا بڑی تبدیلی پر ضروری)</label>
+        <textarea class="textarea" id="f-note" rows="3" maxlength="2000">{post.editor_note}</textarea>
+      </div>
+      <label class="check"><input type="checkbox" id="f-major" checked={post.major_edit} /> یہ بڑی تبدیلی ہے (لکھاری کو نوٹ دکھایا جائے گا)</label>
+      <p class="err" role="alert" id="post-err" hidden style="margin-top: 12px;"></p>
+      <div class="actions">
+        {canPublish && <button type="button" class="btn btn-primary" data-act="publish">منظور اور شائع کریں</button>}
+        <button type="button" class="btn" data-act="save">{isPublished ? 'ایڈٹ لائیو محفوظ کریں' : 'ایڈٹ محفوظ کریں'}</button>
+        {canApprove && <button type="button" class="btn" data-act="approve">منظور (ابھی شائع نہیں)</button>}
+        {canReturn && <button type="button" class="btn" data-act="return">تبدیلی مانگیں</button>}
+        {canReject && <button type="button" class="btn btn-danger" data-act="reject">مسترد کریں</button>}
+        {isPublished && <button type="button" class="btn btn-danger" data-act="unpublish">شائع سے ہٹائیں</button>}
+      </div>
+    </section>
+  </form>
+
+  <section class="panel">
+    <h2>لکھاری سے رابطہ</h2>
+    <p class="small muted" style="margin-bottom: 8px;">جی میل میں پیغام اور نجی لنک پہلے سے لکھا ہوا کھلے گا، آپ خود بھیجیں گے۔</p>
+    <div class="actions" style="margin-top: 0;">
+      <a class="btn" href={mailHref} target="_blank" rel="noopener">جی میل میں کھولیں</a>
+    </div>
+    {msgs.length > 0 && (
+      <div class="thread" style="margin-top: 16px;">
+        {msgs.map((m) => (
+          <div class:list={['msg', m.sender === 'writer' ? 'editor' : 'writer']}>
+            <small>{m.sender === 'editor' ? 'آپ (ایڈیٹر)' : w.name} · {timeAgo(m.created_at)}</small>
+            {m.body}
+          </div>
+        ))}
+      </div>
+    )}
+    <div class="field" style="margin-top: 16px;">
+      <label class="label" for="m-body">سائٹ کے اندر پیغام (لکھاری کے نجی لنک پر دکھے گا)</label>
+      <textarea class="textarea" id="m-body" rows="3" maxlength="2000"></textarea>
+    </div>
+    <p class="err" role="alert" id="msg-err" hidden></p>
+    <button type="button" class="btn" id="send-msg">پیغام بھیجیں</button>
+  </section>
+
+  <script>
+    const form = document.getElementById('post-form') as HTMLFormElement;
+    const id = form.dataset.id!;
+    const errBox = document.getElementById('post-err')!;
+    const val = (i: string) => (document.getElementById(i) as HTMLInputElement | HTMLTextAreaElement | null)?.value ?? '';
+    const chk = (i: string) => !!(document.getElementById(i) as HTMLInputElement | null)?.checked;
+    const hidden = (n: string) => (form.querySelector(`input[name="${n}"]`) as HTMLInputElement | null)?.value ?? '';
+
+    async function send(payload: Record<string, unknown>) {
+      const res = await fetch('/api/admin/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'کارروائی پوری نہیں ہو سکی');
+    }
+
+    const asks: Record<string, string> = {
+      reject: 'یہ تحریر مسترد کر دی جائے؟',
+      unpublish: 'تحریر سائٹ سے ہٹا دی جائے؟',
+      publish: 'تحریر شائع کر دی جائے؟',
+    };
+
+    form.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-act]');
+      if (!btn) return;
+      const act = btn.dataset.act!;
+      if (asks[act] && !confirm(asks[act])) return;
+      errBox.hidden = true;
+      const all = form.querySelectorAll<HTMLButtonElement>('[data-act]');
+      all.forEach((b) => (b.disabled = true));
+      try {
+        await send({
+          action: act,
+          id,
+          title: val('f-title'),
+          category: val('f-category'),
+          body: val('f-body'),
+          cover: hidden('cover'),
+          removeCover: chk('f-removecover'),
+          note: val('f-note'),
+          major: chk('f-major'),
+          writer: {
+            name: val('w-name'),
+            handle: val('w-handle'),
+            bio: val('w-bio'),
+            avatar: hidden('avatar'),
+            removeAvatar: chk('w-removeavatar'),
+          },
+        });
+        if (['publish', 'reject', 'approve', 'return'].includes(act)) location.href = '/admin';
+        else location.reload();
+      } catch (x) {
+        errBox.textContent = x instanceof Error ? x.message : 'کارروائی پوری نہیں ہو سکی';
+        errBox.hidden = false;
+        errBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        all.forEach((b) => (b.disabled = false));
+      }
+    });
+
+    document.getElementById('send-msg')!.addEventListener('click', async () => {
+      const box = document.getElementById('msg-err')!;
+      box.hidden = true;
+      try {
+        await send({ action: 'message', id, note: val('m-body') });
+        location.reload();
+      } catch (x) {
+        box.textContent = x instanceof Error ? x.message : 'پیغام نہیں بھیجا جا سکا';
+        box.hidden = false;
+      }
+    });
+  </script>
+</Admin>

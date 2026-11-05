@@ -1,0 +1,71 @@
+---
+import Base from '../layouts/Base.astro';
+import '../styles/reading.css';
+import '../styles/write.css';
+import { getPage } from '../lib/data';
+import { renderMarkdown } from '../lib/markdown';
+
+// صفحے کی تحریر ایڈمن کے "صفحات" میں (contact) سے آتی ہے؛ نہ ہو تو بھی فارم چلتا ہے
+let page = null;
+try {
+  page = await getPage('contact');
+} catch (e) {
+  console.error('contact page:', e);
+}
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+---
+<Base title="رابطہ" description={page?.description || 'ہمیں پیغام بھیجیں'}>
+  <div class="container form-page">
+    <h1 class="nq">{page?.title || 'رابطہ'}</h1>
+    {page?.body && <div class="prose" style="margin: 12px 0 24px;" set:html={renderMarkdown(page.body)} />}
+
+    <form id="contact-form" novalidate style="margin-top: 16px;">
+      <div class="field">
+        <label class="label" for="c-name">نام (اختیاری)</label>
+        <input class="input" id="c-name" maxlength="60" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label class="label" for="c-email">ای میل (اختیاری، جواب کے لیے)</label>
+        <input class="input" id="c-email" type="email" dir="ltr" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label class="label" for="c-body">آپ کا پیغام</label>
+        <textarea class="textarea" id="c-body" rows="7" maxlength="3000" required></textarea>
+      </div>
+      <input class="hp" type="text" id="c-web" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <p class="err" role="alert" id="c-err" hidden></p>
+      <p class="ok" role="status" id="c-ok" hidden>پیغام بھیج دیا گیا۔ شکریہ۔</p>
+      <button class="btn btn-primary btn-block" type="submit" id="c-go">پیغام بھیجیں</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('contact-form') as HTMLFormElement;
+    const err = document.getElementById('c-err')!;
+    const ok = document.getElementById('c-ok')!;
+    const go = document.getElementById('c-go') as HTMLButtonElement;
+    const v = (i: string) => (document.getElementById(i) as HTMLInputElement).value;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.hidden = true;
+      ok.hidden = true;
+      go.disabled = true;
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: v('c-name'), email: v('c-email'), body: v('c-body'), website: v('c-web') }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'پیغام نہیں بھیجا جا سکا');
+        form.reset();
+        ok.hidden = false;
+      } catch (x) {
+        err.textContent = x instanceof Error ? x.message : 'پیغام نہیں بھیجا جا سکا';
+        err.hidden = false;
+      } finally {
+        go.disabled = false;
+      }
+    });
+  </script>
+</Base>

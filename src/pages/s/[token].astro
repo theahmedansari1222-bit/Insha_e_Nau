@@ -1,0 +1,147 @@
+---
+// لکھاری کا نجی صفحہ: لنک ہی اس کی پہچان ہے۔ نہ لاگ اِن، نہ پاسورڈ۔
+import Base from '../../layouts/Base.astro';
+import ShareButton from '../../components/ShareButton.astro';
+import '../../styles/reading.css';
+import '../../styles/write.css';
+import { dbAdmin } from '../../lib/supabase';
+import { siteUrl } from '../../lib/env';
+import { timeAgo } from '../../lib/urdu';
+import { unavailable } from '../../lib/data';
+
+const { token } = Astro.params;
+if (!token || !/^[A-Za-z0-9]{26}$/.test(token)) return Astro.rewrite('/404');
+
+Astro.response.headers.set('Cache-Control', 'no-store');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+
+type Msg = { sender: 'writer' | 'editor'; body: string; created_at: string };
+let post: any = null;
+let msgs: Msg[] = [];
+try {
+  const db = dbAdmin();
+  const r = await db
+    .from('posts')
+    .select('id,short_id,title,status,editor_note,major_edit,body')
+    .eq('track_token', token)
+    .maybeSingle();
+  if (r.error) throw new Error(r.error.message);
+  post = r.data;
+  if (post) {
+    const m = await db.from('messages').select('sender,body,created_at').eq('post_id', post.id).order('created_at');
+    if (m.error) throw new Error(m.error.message);
+    msgs = (m.data ?? []) as Msg[];
+  }
+} catch (e) {
+  console.error('tracking page:', e);
+  return unavailable();
+}
+if (!post) return Astro.rewrite('/404');
+
+const STATUS: Record<string, { label: string; text: string }> = {
+  submitted: { label: 'جائزے میں', text: 'ایڈیٹر آپ کی تحریر دیکھ رہا ہے۔ فیصلہ ہوتے ہی یہاں نظر آئے گا۔' },
+  returned: { label: 'ترمیم درکار', text: 'ایڈیٹر نے تبدیلی مانگی ہے۔ نیچے ترمیم کر کے دوبارہ بھیجیں۔' },
+  approved: { label: 'منظور', text: 'تحریر منظور ہو گئی ہے اور جلد شائع ہو گی۔' },
+  published: { label: 'شائع ہو چکی', text: 'آپ کی تحریر سائٹ پر آ چکی ہے۔' },
+  rejected: { label: 'شائع نہیں ہو سکی', text: 'ایڈیٹر کی بات نیچے دیکھیں۔' },
+};
+const st = STATUS[post.status] ?? STATUS.submitted;
+const privateUrl = `${siteUrl()}/s/${token}`;
+---
+<Base title="آپ کی تحریر کی حالت" noindex>
+  <div class="container form-page stack" style="--gap: 20px;">
+    <p class="tag">نجی لنک: صرف آپ کے لیے</p>
+    <h1 class="nq article-title">{post.title}</h1>
+
+    <div class="notice accent">
+      <b class="tag">{st.label}</b>
+      <p>{st.text}</p>
+      {post.status === 'published' && <a class="btn btn-primary" href={`/p/${post.short_id}`}>تحریر دیکھیں</a>}
+    </div>
+
+    {post.editor_note && (
+      <div class="notice">
+        <b>ایڈیٹر کا نوٹ</b>
+        <p style="white-space: pre-wrap;">{post.editor_note}</p>
+      </div>
+    )}
+
+    {post.major_edit && post.status === 'published' && (
+      <div class="notice">
+        <p>ایڈیٹر نے اس تحریر میں نمایاں تبدیلیاں کی ہیں۔ اعتراض ہو تو نیچے پیغام لکھیں۔</p>
+      </div>
+    )}
+
+    {msgs.length > 0 && (
+      <section class="thread" aria-label="پیغامات">
+        {msgs.map((m) => (
+          <div class:list={['msg', m.sender]}>
+            <small>{m.sender === 'editor' ? 'ایڈیٹر' : 'آپ'} · {timeAgo(m.created_at)}</small>
+            {m.body}
+          </div>
+        ))}
+      </section>
+    )}
+
+    {post.status === 'returned' && (
+      <form data-api="revise" data-token={token} novalidate>
+        <h2 class="box-title">ترمیم کر کے دوبارہ بھیجیں</h2>
+        <div class="field" style="margin-top: 8px;">
+          <label class="sr-only" for="revise-body">تحریر</label>
+          <textarea class="textarea" id="revise-body" name="body" rows="14" dir="auto">{post.body}</textarea>
+        </div>
+        <p class="err" role="alert" data-msg hidden></p>
+        <button class="btn btn-primary btn-block" type="submit">دوبارہ بھیجیں</button>
+      </form>
+    )}
+
+    <form data-api="message" data-token={token} novalidate>
+      <h2 class="box-title">ایڈیٹر کو پیغام</h2>
+      <div class="field" style="margin-top: 8px;">
+        <label class="sr-only" for="msg-body">پیغام</label>
+        <textarea class="textarea" id="msg-body" name="body" rows="3" maxlength="1500" placeholder="اپنی بات لکھیں…"></textarea>
+      </div>
+      <p class="err" role="alert" data-msg hidden></p>
+      <button class="btn btn-block" type="submit">پیغام بھیجیں</button>
+    </form>
+
+    <div class="notice">
+      <b>اس لنک کو محفوظ رکھیں</b>
+      <p class="muted">اسی سے آپ اپنی تحریر کی حالت دیکھ سکیں گے۔ لنک کھو جائے تو ایڈیٹر کو ای میل کریں۔</p>
+      <ShareButton url={privateUrl} label="لنک کاپی کریں" title="میری تحریر کی حالت" />
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll<HTMLFormElement>('form[data-api]').forEach((form) => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        const msg = form.querySelector<HTMLElement>('[data-msg]')!;
+        const old = btn.textContent;
+        msg.hidden = true;
+        btn.disabled = true;
+        btn.textContent = 'بھیجا جا رہا ہے…';
+        try {
+          const res = await fetch('/api/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: form.dataset.token,
+              action: form.dataset.api,
+              body: new FormData(form).get('body'),
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'درخواست پوری نہیں ہو سکی');
+          location.reload();
+        } catch (err) {
+          msg.textContent = err instanceof Error ? err.message : 'درخواست پوری نہیں ہو سکی';
+          msg.hidden = false;
+          btn.disabled = false;
+          btn.textContent = old;
+        }
+      });
+    });
+  </script>
+</Base>

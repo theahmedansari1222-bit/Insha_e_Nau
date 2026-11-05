@@ -4,6 +4,7 @@ import SeoTags from '../components/SeoTags.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import TabBar from '../components/TabBar.astro';
+import { getEnv } from '../lib/env';
 
 interface Props {
   title?: string;
@@ -14,10 +15,13 @@ interface Props {
   publishedTime?: string;
   author?: string;
   bare?: boolean;
+  ads?: boolean;
 }
 
-const { bare = false, ...seo } = Astro.props;
+const { bare = false, ads = false, ...seo } = Astro.props;
 const current = Astro.url.pathname;
+// اشتہار کی لائبریری صرف انہی صفحوں پر لوڈ ہوتی ہے جو ads مانگیں اور سیٹنگ موجود ہو
+const adsClient = ads ? getEnv().ADSENSE_CLIENT || '' : '';
 ---
 <!doctype html>
 <html lang="ur" dir="rtl">
@@ -33,6 +37,9 @@ const current = Astro.url.pathname;
       href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap"
     />
     <SeoTags {...seo} />
+    {adsClient && (
+      <script is:inline async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsClient}`} crossorigin="anonymous"></script>
+    )}
     <slot name="head" />
   </head>
   <body>

@@ -1,0 +1,45 @@
+---
+import Base from './Base.astro';
+import '../styles/admin.css';
+
+interface Props {
+  title?: string;
+  active?: 'posts' | 'writers' | 'pages' | 'messages';
+}
+const { title = 'ایڈمن', active } = Astro.props;
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+const tabs = [
+  { key: 'posts', href: '/admin', label: 'تحریریں' },
+  { key: 'writers', href: '/admin/writers', label: 'لکھاری' },
+  { key: 'pages', href: '/admin/pages', label: 'صفحات' },
+  { key: 'messages', href: '/admin/messages', label: 'پیغامات' },
+];
+---
+<Base title={title} noindex bare>
+  <header class="admin-head">
+    <div class="container wide admin-bar">
+      <a class="brand" href="/admin">انشائے نو</a>
+      <span class="pill">ایڈمن</span>
+      <span class="spacer"></span>
+      <a class="small muted" href="/" target="_blank" rel="noopener">سائٹ دیکھیں</a>
+      <button type="button" class="link-btn" id="logout">لاگ آؤٹ</button>
+    </div>
+    <nav class="container wide chips" aria-label="ایڈمن">
+      {tabs.map((t) => (
+        <a class="chip" href={t.href} aria-current={active === t.key ? 'page' : undefined}>{t.label}</a>
+      ))}
+    </nav>
+  </header>
+  <div class="container wide admin-main">
+    <slot />
+  </div>
+  <script>
+    document.getElementById('logout')?.addEventListener('click', async () => {
+      try {
+        await fetch('/api/admin/logout', { method: 'POST' });
+      } catch {}
+      location.href = '/admin/login';
+    });
+  </script>
+</Base>

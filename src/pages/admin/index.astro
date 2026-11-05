@@ -1,0 +1,70 @@
+---
+import Admin from '../../layouts/Admin.astro';
+import { dbAdmin } from '../../lib/supabase';
+import { getCategories } from '../../lib/data';
+import { STATUS_AR, STATUS_ORDER } from '../../lib/admin';
+import { timeAgo, toUrduDigits } from '../../lib/urdu';
+
+const asked = Astro.url.searchParams.get('s') ?? '';
+const s = STATUS_ORDER.includes(asked) ? asked : 'submitted';
+const db = dbAdmin();
+
+let rows: any[] = [];
+let counts: Record<string, number> = {};
+let problem = '';
+const cats = await getCategories();
+const names: Record<string, string> = Object.fromEntries(cats.map((c) => [c.slug, c.name]));
+
+try {
+  const oldestFirst = s === 'submitted' || s === 'returned';
+  const [list, ...cs] = await Promise.all([
+    db
+      .from('posts')
+      .select('id,title,category,status,created_at,published_at,writers(name,handle)')
+      .eq('status', s)
+      .order('created_at', { ascending: oldestFirst })
+      .limit(60),
+    ...STATUS_ORDER.map((st) => db.from('posts').select('*', { count: 'exact', head: true }).eq('status', st)),
+  ]);
+  if (list.error) throw new Error(list.error.message);
+  rows = list.data ?? [];
+  STATUS_ORDER.forEach((st, i) => (counts[st] = cs[i].count ?? 0));
+} catch (e) {
+  console.error('admin list:', e);
+  problem = 'ڈیٹا بیس سے رابطہ نہیں ہو سکا۔ جانچیں کہ SUPABASE_SECRET_KEY کلاؤڈ فلیئر میں درست ڈالی ہے۔';
+}
+---
+<Admin title="ایڈمن: تحریریں" active="posts">
+  <nav class="chips" aria-label="حالت" style="margin-top: 12px;">
+    {STATUS_ORDER.map((st) => (
+      <a class="chip" href={`/admin?s=${st}`} aria-current={s === st ? 'page' : undefined}>
+        {STATUS_AR[st]}{counts[st] ? ` (${toUrduDigits(counts[st])})` : ''}
+      </a>
+    ))}
+  </nav>
+
+  {problem && <p class="err" role="alert" style="margin-block: 16px;">{problem}</p>}
+
+  {!problem && rows.length === 0 && <p class="muted" style="padding-block: 32px;">اس حالت میں کوئی تحریر نہیں۔</p>}
+
+  <div class="list">
+    {rows.map((p) => (
+      <a class="row-card" href={`/admin/post/${p.id}`}>
+        <span class="top">
+          <span class="tag">{names[p.category] ?? p.category}</span>
+          <span class="muted">{timeAgo(p.created_at)}</span>
+        </span>
+        <span class="t">{p.title}</span>
+        <span class="small muted">
+          {p.writers?.name}
+          {p.writers?.handle ? ` · @${p.writers.handle}` : ' · ہینڈل نہیں'}
+        </span>
+      </a>
+    ))}
+  </div>
+
+  <p class="small muted" style="margin-top: 32px;">
+    <a href="/api/admin/export" style="color: var(--accent);">پورے ڈیٹا کا بیک اپ ڈاؤن لوڈ کریں</a>
+    (مفت پلان میں خودکار بیک اپ نہیں ہوتا، ہفتے میں ایک بار رکھ لیں)
+  </p>
+</Admin>

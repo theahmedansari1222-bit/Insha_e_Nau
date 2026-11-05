@@ -1,0 +1,41 @@
+/* ایڈمن پینل کے انداز */
+.admin-head { position: sticky; top: 0; z-index: 20; background: var(--ink); border-bottom: 1px solid var(--line); }
+.admin-bar { display: flex; align-items: center; gap: 12px; height: 56px; }
+.admin-bar .brand { font-size: 24px; }
+.admin-bar .spacer { flex: 1; }
+.pill { font-size: 14px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 14px; line-height: 1.9; }
+.admin-main { padding-block: 20px 80px; }
+.admin-main h1 { font-size: 28px; font-weight: 700; line-height: 2; }
+
+.list { display: flex; flex-direction: column; gap: 10px; margin-block: 16px; }
+.row-card { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; text-decoration: none; }
+.row-card .top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.row-card .t { font-family: var(--f-title); font-size: 20px; line-height: 2; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; margin-block: 16px; }
+.panel h2 { font-size: 18px; font-weight: 600; line-height: 1.8; margin-bottom: 8px; }
+.grid-2 { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+@media (min-width: 720px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.actions .btn { flex: 1 1 150px; }
+.btn-danger { color: var(--danger); border-color: var(--danger); }
+.kv { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 15px; color: var(--muted); line-height: 1.9; }
+.ok { color: var(--accent); }
+
+/* متن کے اوزار */
+.md-tools { display: flex; flex-wrap: wrap; gap: 2px; background: var(--ink); border: 1px solid var(--line); border-radius: 14px 14px 0 0; padding: 0 4px; }
+.md-tools button { height: 44px; padding: 0 12px; border: 0; background: transparent; font-size: 15px; }
+.md-tools button[aria-pressed='true'] { color: var(--accent); font-weight: 600; }
+.md-tools + .textarea { border-radius: 0 0 14px 14px; border-top: 0; }
+.md-preview { border: 1px solid var(--line); border-radius: 0 0 14px 14px; padding: 16px; min-height: 200px; }
+pre.orig { white-space: pre-wrap; font: inherit; color: var(--body); background: var(--ink); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; line-height: 2; margin: 8px 0 0; }
+details summary { cursor: pointer; padding: 8px 0; }
+.cover-now { width: 160px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; margin-bottom: 8px; }
+
+/* واٹس ایپ کارڈ کا پریویو */
+.wa-card { max-width: 360px; border-radius: 14px; overflow: hidden; background: #1f2430; border: 1px solid var(--line); }
+.wa-card img { width: 100%; aspect-ratio: 1.91 / 1; object-fit: cover; }
+.wa-body { padding: 10px 14px; line-height: 1.7; }
+.wa-title { font-weight: 600; font-size: 16px; }
+.wa-desc { font-size: 14px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wa-host { font-size: 13px; color: var(--muted); direction: ltr; text-align: right; }

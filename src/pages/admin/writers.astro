@@ -1,0 +1,106 @@
+---
+import Admin from '../../layouts/Admin.astro';
+import { dbAdmin } from '../../lib/supabase';
+import { timeAgo, toUrduDigits } from '../../lib/urdu';
+
+let rows: any[] = [];
+let problem = '';
+try {
+  const r = await dbAdmin()
+    .from('writers')
+    .select('id,email,name,handle,bio,avatar_url,status,trusted,published_count,created_at')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (r.error) throw new Error(r.error.message);
+  rows = r.data ?? [];
+} catch (e) {
+  console.error('admin writers:', e);
+  problem = 'ڈیٹا بیس سے رابطہ نہیں ہو سکا۔';
+}
+const STATE: Record<string, string> = { pending: 'نیا (منظوری باقی)', active: 'فعال', blocked: 'بلاک' };
+---
+<Admin title="ایڈمن: لکھاری" active="writers">
+  <h1 class="nq" style="margin-top: 8px;">لکھاری</h1>
+  {problem && <p class="err" role="alert">{problem}</p>}
+  {!problem && rows.length === 0 && <p class="muted" style="padding-block: 24px;">ابھی کوئی لکھاری نہیں۔</p>}
+
+  <div class="list">
+    {rows.map((w) => (
+      <details class="panel" style="margin: 0;" data-writer={w.id}>
+        <summary>
+          <b>{w.name}</b>
+          <span class="muted small">
+            {w.handle ? ` · @${w.handle}` : ' · ہینڈل نہیں'} · {STATE[w.status]} · شائع: {toUrduDigits(w.published_count)}
+          </span>
+        </summary>
+        <p class="kv"><span dir="ltr">{w.email}</span><span>شامل ہوا: {timeAgo(w.created_at)}</span></p>
+        <div class="grid-2" style="margin-top: 8px;">
+          <div class="field">
+            <label class="label">نام</label>
+            <input class="input" data-f="name" value={w.name} maxlength="60" />
+          </div>
+          <div class="field">
+            <label class="label">ہینڈل</label>
+            <input class="input" data-f="handle" dir="ltr" value={w.handle ?? ''} maxlength="20" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">تعارف</label>
+          <textarea class="textarea" data-f="bio" rows="3" maxlength="300">{w.bio}</textarea>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label class="label">حالت</label>
+            <select class="input" data-f="status">
+              <option value="pending" selected={w.status === 'pending'}>نیا (منظوری باقی)</option>
+              <option value="active" selected={w.status === 'active'}>فعال</option>
+              <option value="blocked" selected={w.status === 'blocked'}>بلاک</option>
+            </select>
+          </div>
+          <div class="field" style="justify-content: flex-end;">
+            <label class="check"><input type="checkbox" data-f="trusted" checked={w.trusted} /> قابلِ اعتماد لکھاری</label>
+            {w.avatar_url && <label class="check"><input type="checkbox" data-f="removeAvatar" /> تصویر ہٹائیں</label>}
+          </div>
+        </div>
+        <p class="err" role="alert" data-err hidden></p>
+        <button type="button" class="btn btn-primary" data-save>محفوظ کریں</button>
+      </details>
+    ))}
+  </div>
+
+  <script>
+    document.querySelectorAll<HTMLElement>('[data-writer]').forEach((box) => {
+      const id = box.dataset.writer!;
+      const f = (n: string) => box.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`[data-f="${n}"]`);
+      const err = box.querySelector<HTMLElement>('[data-err]')!;
+      box.querySelector('[data-save]')!.addEventListener('click', async (e) => {
+        const btn = e.currentTarget as HTMLButtonElement;
+        err.hidden = true;
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/admin/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'writer',
+              id,
+              name: f('name')!.value,
+              handle: f('handle')!.value,
+              bio: f('bio')!.value,
+              status: f('status')!.value,
+              trusted: (f('trusted') as HTMLInputElement).checked,
+              removeAvatar: (f('removeAvatar') as HTMLInputElement | null)?.checked ?? false,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'محفوظ نہیں ہو سکا');
+          location.reload();
+        } catch (x) {
+          err.textContent = x instanceof Error ? x.message : 'محفوظ نہیں ہو سکا';
+          err.hidden = false;
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</Admin>

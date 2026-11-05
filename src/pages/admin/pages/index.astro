@@ -1,0 +1,37 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import { dbAdmin } from '../../../lib/supabase';
+
+let rows: any[] = [];
+let problem = '';
+try {
+  const r = await dbAdmin()
+    .from('pages')
+    .select('slug,title,status,is_system,in_footer,sort_order')
+    .order('sort_order');
+  if (r.error) throw new Error(r.error.message);
+  rows = r.data ?? [];
+} catch (e) {
+  console.error('admin pages:', e);
+  problem = 'ڈیٹا بیس سے رابطہ نہیں ہو سکا۔';
+}
+---
+<Admin title="ایڈمن: صفحات" active="pages">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+    <h1 class="nq">صفحات</h1>
+    <a class="btn" href="/admin/pages/new" style="border-color: var(--accent); color: var(--accent);">نیا صفحہ</a>
+  </div>
+  {problem && <p class="err" role="alert">{problem}</p>}
+  <div class="list">
+    {rows.map((p) => (
+      <a class="row-card" href={`/admin/pages/${p.slug}`} style="flex-direction: row; align-items: center; justify-content: space-between;">
+        <span>
+          <b style="font-size: 17px;">{p.title}</b><br />
+          <span class="small muted" dir="ltr">/{p.slug}</span>
+        </span>
+        <span class={p.status === 'published' ? 'tag' : 'small muted'}>{p.status === 'published' ? 'شائع' : 'مسودہ'}</span>
+      </a>
+    ))}
+  </div>
+  <p class="small muted">ہمارے بارے میں، اشاعت کے اصول، پرائیویسی اور شرائط کا متن یہیں سے لکھیں اور "شائع" کریں۔</p>
+</Admin>

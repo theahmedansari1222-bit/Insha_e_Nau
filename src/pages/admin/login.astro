@@ -1,0 +1,50 @@
+---
+import Base from '../../layouts/Base.astro';
+import '../../styles/write.css';
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+<Base title="ایڈمن لاگ اِن" noindex bare>
+  <div class="container form-page" style="max-width: 420px;">
+    <h1 class="nq">ایڈمن لاگ اِن</h1>
+    <form id="login" novalidate style="margin-top: 16px;">
+      <div class="field">
+        <label class="label" for="email">ای میل</label>
+        <input class="input" id="email" type="email" dir="ltr" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label class="label" for="password">پاسورڈ</label>
+        <input class="input" id="password" type="password" dir="ltr" autocomplete="current-password" required />
+      </div>
+      <p class="err" role="alert" id="err" hidden></p>
+      <button class="btn btn-primary btn-block" type="submit" id="go">لاگ اِن</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('login') as HTMLFormElement;
+    const err = document.getElementById('err')!;
+    const go = document.getElementById('go') as HTMLButtonElement;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.hidden = true;
+      go.disabled = true;
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: (document.getElementById('email') as HTMLInputElement).value,
+            password: (document.getElementById('password') as HTMLInputElement).value,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'لاگ اِن نہیں ہو سکا');
+        location.href = '/admin';
+      } catch (x) {
+        err.textContent = x instanceof Error ? x.message : 'لاگ اِن نہیں ہو سکا';
+        err.hidden = false;
+        go.disabled = false;
+      }
+    });
+  </script>
+</Base>

@@ -28,7 +28,7 @@ const base = siteUrl();
 const url = base + Astro.url.pathname;
 const fullTitle = title ? `${title} — ${SITE.name}` : `${SITE.name} — ${SITE.tagline}`;
 const ogTitle = title ?? SITE.name;
-const img = image ? (image.startsWith('http') ? image : base + image) : `${base}/default-card.jpg`;
+const img = image ? (image.startsWith('http') ? image : base + image) : `${base}/default-card.png`;
 ---
 <title>{fullTitle}</title>
 <meta name="description" content={description} />

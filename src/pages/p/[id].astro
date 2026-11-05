@@ -4,11 +4,12 @@ import Avatar from '../../components/Avatar.astro';
 import Card from '../../components/Card.astro';
 import ReadingBar from '../../components/ReadingBar.astro';
 import ShareButton from '../../components/ShareButton.astro';
+import AdSlot from '../../components/AdSlot.astro';
 import '../../styles/reading.css';
 import { getPost, getRelated, getCategories, unavailable } from '../../lib/data';
 import { renderMarkdown } from '../../lib/markdown';
 import { readLabel, formatDate } from '../../lib/urdu';
-import { siteUrl } from '../../lib/env';
+import { siteUrl, getEnv } from '../../lib/env';
 import { SITE } from '../../lib/site';
 
 const { id } = Astro.params;
@@ -29,6 +30,7 @@ const base = siteUrl();
 const url = `${base}/p/${post.short_id}`;
 const waHref = `https://wa.me/?text=${encodeURIComponent(`${post.title}\n${url}`)}`;
 const html = renderMarkdown(post.body);
+const adSlot = getEnv().ADSENSE_SLOT_ARTICLE || '';
 
 // تلاش کے انجنوں کے لیے منظم معلومات (">" سے بچاؤ کے ساتھ)
 const ld = JSON.stringify({
@@ -53,6 +55,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60');
   type="article"
   publishedTime={post.published_at}
   author={post.writer_name}
+  ads
 >
   <Fragment slot="head">
     <script type="application/ld+json" is:inline set:html={ld} />
@@ -93,8 +96,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60');
 
     <div class="prose" set:html={html} />
 
+    <AdSlot slot={adSlot} />
+
     <div class="share">
       <a class="btn btn-primary" href={waHref} target="_blank" rel="noopener">واٹس ایپ پر بھیجیں</a>
+      <button type="button" class="btn like-btn" data-like={post.short_id} data-count={post.likes} aria-pressed="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-8-5.5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 10c0 5.5-8 11-8 11z"></path></svg>
+        <span>پسند</span>
+        <span data-like-count></span>
+      </button>
       <ShareButton url={url} title={post.title} />
     </div>
 
@@ -132,5 +142,50 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60');
       } catch {}
     }),
   );
+
+  // پسند کا بٹن
+  const likeBtn = document.querySelector<HTMLButtonElement>('[data-like]');
+  if (likeBtn) {
+    const sid = likeBtn.dataset.like!;
+    const countEl = likeBtn.querySelector<HTMLElement>('[data-like-count]')!;
+    const toUrdu = (n: number) => String(n).replace(/[0-9]/g, (d) => String.fromCharCode(0x06f0 + Number(d)));
+    let device = '';
+    let liked = false;
+    try {
+      device = localStorage.getItem('dev') || '';
+      if (!device) {
+        device = crypto.randomUUID();
+        localStorage.setItem('dev', device);
+      }
+      liked = localStorage.getItem('liked:' + sid) === '1';
+    } catch {}
+    let count = Number(likeBtn.dataset.count || 0);
+    const paint = () => {
+      likeBtn.setAttribute('aria-pressed', String(liked));
+      countEl.textContent = count > 0 ? toUrdu(count) : '';
+    };
+    paint();
+    likeBtn.addEventListener('click', async () => {
+      if (!device) return;
+      liked = !liked;
+      count = Math.max(0, count + (liked ? 1 : -1));
+      paint();
+      try {
+        localStorage.setItem('liked:' + sid, liked ? '1' : '0');
+      } catch {}
+      try {
+        const res = await fetch('/api/react', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: sid, device, on: liked }),
+        });
+        const data = await res.json();
+        if (res.ok && typeof data.likes === 'number') {
+          count = data.likes;
+          paint();
+        }
+      } catch {}
+    });
+  }
 </script>
 </Base>

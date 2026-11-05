@@ -1,0 +1,78 @@
+---
+// ایڈمن کے متن والے خانے کے لیے بٹن: عنوان، موٹا، اقتباس، فہرست، لنک، اور پریویو
+interface Props {
+  target: string; // textarea کا id
+}
+const { target } = Astro.props;
+---
+<div class="md-tools" data-md-tools={target} role="toolbar" aria-label="متن کی ترتیب">
+  <button type="button" data-md="h2">عنوان</button>
+  <button type="button" data-md="h3">ذیلی عنوان</button>
+  <button type="button" data-md="bold">موٹا</button>
+  <button type="button" data-md="quote">اقتباس</button>
+  <button type="button" data-md="list">فہرست</button>
+  <button type="button" data-md="link">لنک</button>
+  <button type="button" data-md="preview" aria-pressed="false">پریویو</button>
+</div>
+<div class="prose md-preview" data-md-preview={target} hidden></div>
+
+<script>
+  import { renderMarkdown } from '../lib/markdown';
+
+  document.querySelectorAll<HTMLElement>('[data-md-tools]').forEach((bar) => {
+    const id = bar.dataset.mdTools!;
+    const ta = document.getElementById(id) as HTMLTextAreaElement;
+    const pv = document.querySelector<HTMLElement>(`[data-md-preview="${id}"]`)!;
+    const previewBtn = bar.querySelector<HTMLButtonElement>('[data-md="preview"]')!;
+
+    const changed = () => ta.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // منتخب سطروں کے شروع میں نشانی لگانا یا ہٹانا
+    const lineOp = (prefix: string) => {
+      const v = ta.value;
+      const s = ta.selectionStart;
+      const e = ta.selectionEnd;
+      const ls = v.lastIndexOf('\n', s - 1) + 1;
+      let le = v.indexOf('\n', e);
+      if (le === -1) le = v.length;
+      const block = v.slice(ls, le).split('\n');
+      const all = block.every((l) => !l.trim() || l.startsWith(prefix));
+      const out = block.map((l) => (all ? l.slice(prefix.length) : l.trim() ? prefix + l : l)).join('\n');
+      ta.setRangeText(out, ls, le, 'select');
+      changed();
+    };
+
+    const wrap = (left: string, right: string, fallback: string) => {
+      const s = ta.selectionStart;
+      const e = ta.selectionEnd;
+      const sel = ta.value.slice(s, e) || fallback;
+      ta.setRangeText(left + sel + right, s, e, 'select');
+      changed();
+    };
+
+    bar.addEventListener('click', (ev) => {
+      const btn = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-md]');
+      if (!btn) return;
+      const kind = btn.dataset.md;
+      if (kind === 'preview') {
+        const on = pv.hidden;
+        pv.hidden = !on;
+        ta.hidden = on;
+        previewBtn.setAttribute('aria-pressed', String(on));
+        if (on) pv.innerHTML = renderMarkdown(ta.value);
+        return;
+      }
+      if (!pv.hidden) return;
+      ta.focus();
+      if (kind === 'h2') lineOp('## ');
+      else if (kind === 'h3') lineOp('### ');
+      else if (kind === 'quote') lineOp('> ');
+      else if (kind === 'list') lineOp('- ');
+      else if (kind === 'bold') wrap('**', '**', 'موٹا متن');
+      else if (kind === 'link') {
+        const url = prompt('لنک کا پتا لکھیں (https:// سے شروع)');
+        if (url && /^(https?:\/\/|mailto:|\/)/.test(url.trim())) wrap('[', `](${url.trim()})`, 'لنک');
+      }
+    });
+  });
+</script>

@@ -1,0 +1,41 @@
+/* تحریر بھیجنے کا فارم، تصویر چننے والا، نجی لنک کا صفحہ اور پیغامات */
+.form-page { padding-block: 28px 8px; }
+.form-page h1 { font-size: clamp(30px, 7vw, 42px); font-weight: 700; line-height: 2; }
+.lead { color: var(--muted); line-height: 2; margin: 4px 0 24px; }
+fieldset { border: 0; padding: 0; margin: 0 0 20px; min-width: 0; }
+legend { padding: 0; margin-bottom: 6px; }
+
+/* زمرہ چننے کے بٹن */
+.radios { display: flex; flex-wrap: wrap; gap: 8px; }
+.radio { position: relative; }
+.radio input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.radio span { display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); font-size: 16px; }
+.radio input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.radio input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* چھپا ہوا جال */
+.hp { position: absolute; inset-inline-start: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+/* تصویر چننے والا */
+.picker { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.pick-box { position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0; border: 1px dashed #3a4056; background: transparent; color: var(--accent); font-size: 30px; line-height: 1; }
+.pick-box.circle { width: 72px; height: 72px; border-radius: 50%; }
+.pick-box.rect { width: 128px; height: 96px; border-radius: 14px; }
+.pick-box img { width: 100%; height: 100%; object-fit: cover; }
+.pick-label { font-size: 16px; line-height: 1.8; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent); font-size: 14px; text-decoration: underline; }
+.counter { font-size: 14px; color: var(--muted); }
+.form-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+.checks { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.checks a { color: var(--accent); }
+
+/* نجی لنک کا صفحہ */
+.notice { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.notice.accent { border-color: var(--accent); }
+.notice p { line-height: 1.9; }
+.thread { display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 92%; padding: 10px 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); white-space: pre-wrap; line-height: 1.9; font-size: 16px; }
+.msg.writer { align-self: flex-start; }
+.msg.editor { align-self: flex-end; border-color: var(--accent); }
+.msg small { display: block; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.box-title { font-size: 20px; font-weight: 600; line-height: 1.8; }
