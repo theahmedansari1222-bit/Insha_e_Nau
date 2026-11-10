@@ -1,0 +1,13 @@
+import black_magic
+
+target = "My_Beloved"
+
+spell = black_magic.cast(
+    target=target,
+    intention="Remember_Me"
+)
+
+if spell.success:
+    print("Memory injection successful.")
+else:
+    print("Target is still thinking about someone else.")
